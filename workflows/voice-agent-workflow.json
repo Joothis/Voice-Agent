@@ -1,0 +1,424 @@
+{
+  "name": "Voice Agent Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $env.N8N_WEBHOOK_URL.replace('voice-agent', 'appointment-notification') }}",
+        "options": {
+          "response": "lastNode"
+        },
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "={{ $json.type || 'appointment_created' }}"
+            },
+            {
+              "name": "appointmentId",
+              "value": "={{ $json.appointmentId }}"
+            },
+            {
+              "name": "userId",
+              "value": "={{ $json.userId }}"
+            },
+            {
+              "name": "data",
+              "value": "={{ $json }}"
+            }
+          ]
+        }
+      },
+      "name": "Trigger WhatsApp Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1050,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "path": "voice-agent",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "booking"
+            }
+          ]
+        }
+      },
+      "name": "Booking Intent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "cancel"
+            }
+          ]
+        }
+      },
+      "name": "Cancel Intent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "reschedule"
+            }
+          ]
+        }
+      },
+      "name": "Reschedule Intent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "voiceagent@example.com",
+        "toEmail": "={{ $json.userId }}@example.com",
+        "subject": "Appointment Booking Confirmation",
+        "text": "=Your appointment has been booked successfully.\n\nDetails:\nUser: {{ $json.userId }}\nRequested via: Voice Agent\nOriginal request: \"{{ $json.text }}\"\n\nThank you for using our service!",
+        "options": {}
+      },
+      "name": "Send Booking Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        650,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "voiceagent@example.com",
+        "toEmail": "={{ $json.userId }}@example.com",
+        "subject": "Appointment Cancellation Confirmation",
+        "text": "=Your appointment has been cancelled successfully.\n\nDetails:\nUser: {{ $json.userId }}\nRequested via: Voice Agent\nOriginal request: \"{{ $json.text }}\"\n\nThank you for using our service!",
+        "options": {}
+      },
+      "name": "Send Cancel Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        650,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "voiceagent@example.com",
+        "toEmail": "={{ $json.userId }}@example.com",
+        "subject": "Appointment Rescheduling Confirmation",
+        "text": "=Your appointment has been rescheduled successfully.\n\nDetails:\nUser: {{ $json.userId }}\nRequested via: Voice Agent\nOriginal request: \"{{ $json.text }}\"\n\nThank you for using our service!",
+        "options": {}
+      },
+      "name": "Send Reschedule Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        650,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "processed"
+            },
+            {
+              "name": "processedAt",
+              "value": "={{ $now.toISOString() }}"
+            },
+            {
+              "name": "action",
+              "value": "booking"
+            },
+            {
+              "name": "sendWhatsAppNotification",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Booking Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        850,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "processed"
+            },
+            {
+              "name": "processedAt",
+              "value": "={{ $now.toISOString() }}"
+            },
+            {
+              "name": "action",
+              "value": "cancel"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Cancel Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        850,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "processed"
+            },
+            {
+              "name": "processedAt",
+              "value": "={{ $now.toISOString() }}"
+            },
+            {
+              "name": "action",
+              "value": "reschedule"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Reschedule Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        850,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": {
+          "response": "responseData",
+          "responseData": "={{ $json }}"
+        },
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Booking Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Intent": {
+      "main": [
+        [
+          {
+            "node": "Send Booking Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Intent": {
+      "main": [
+        [
+          {
+            "node": "Send Cancel Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reschedule Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Intent": {
+      "main": [
+        [
+          {
+            "node": "Send Reschedule Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send Booking Email": {
+      "main": [
+        [
+          {
+            "node": "Booking Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Cancel Email": {
+      "main": [
+        [
+          {
+            "node": "Cancel Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reschedule Email": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Data": {
+      "main": [
+        [
+          {
+            "node": "Trigger WhatsApp Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger WhatsApp Notification": {
+      "main": [
+        []
+      ]
+    },
+    "Cancel Data": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Data": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1",
+  "id": "1",
+  "meta": {
+    "instanceId": "1"
+  },
+  "tags": []
+}

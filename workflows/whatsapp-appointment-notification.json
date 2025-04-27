@@ -1,0 +1,367 @@
+{
+  "name": "WhatsApp Appointment Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "appointment-notification",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.type }}",
+              "operation": "equal",
+              "value2": "appointment_created"
+            }
+          ]
+        }
+      },
+      "name": "Appointment Created",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.type }}",
+              "operation": "equal",
+              "value2": "appointment_reminder"
+            }
+          ]
+        }
+      },
+      "name": "Appointment Reminder",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "find",
+        "collection": "appointments",
+        "options": {}
+      },
+      "name": "Get Appointment Details",
+      "type": "n8n-nodes-base.mongodb",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {
+        "mongoDb": {
+          "id": "mongodb-credential",
+          "name": "MongoDB Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "find",
+        "collection": "users",
+        "options": {}
+      },
+      "name": "Get User Details",
+      "type": "n8n-nodes-base.mongodb",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "mongoDb": {
+          "id": "mongodb-credential",
+          "name": "MongoDB Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textBody": "=🗓️ *Appointment Confirmation* 🗓️\n\nHello {{ $json.user.name }},\n\nYour appointment has been successfully scheduled!\n\n*Details:*\n📅 Date: {{ $json.appointment.date }}\n⏰ Time: {{ $json.appointment.time }}\n📝 Type: {{ $json.appointment.type }}\n\nWe look forward to seeing you!\n\nIf you need to reschedule or cancel, please contact us or use our voice assistant.",
+        "operation": "send",
+        "phoneNumberId": "477115632141067",
+        "requestOptions": {},
+        "additionalFields": {
+          "previewUrl": false
+        },
+        "recipientPhoneNumber": "={{ $json.user.phoneNumber }}"
+      },
+      "name": "Send Appointment Confirmation",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "whatsapp-credential",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textBody": "=🔔 *Appointment Reminder* 🔔\n\nHello {{ $json.user.name }},\n\nThis is a friendly reminder about your upcoming appointment:\n\n*Details:*\n📅 Date: {{ $json.appointment.date }}\n⏰ Time: {{ $json.appointment.time }}\n📝 Type: {{ $json.appointment.type }}\n\nWe look forward to seeing you!\n\nIf you need to reschedule or cancel, please contact us or use our voice assistant.",
+        "operation": "send",
+        "phoneNumberId": "477115632141067",
+        "requestOptions": {},
+        "additionalFields": {
+          "previewUrl": false
+        },
+        "recipientPhoneNumber": "={{ $json.user.phoneNumber }}"
+      },
+      "name": "Send Appointment Reminder",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        500
+      ],
+      "credentials": {
+        "whatsAppApi": {
+          "id": "whatsapp-credential",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "notification_sent"
+            },
+            {
+              "name": "notificationSentAt",
+              "value": "={{ $now.toISOString() }}"
+            },
+            {
+              "name": "notificationType",
+              "value": "whatsapp_confirmation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Confirmation Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "reminder_sent"
+            },
+            {
+              "name": "reminderSentAt",
+              "value": "={{ $now.toISOString() }}"
+            },
+            {
+              "name": "notificationType",
+              "value": "whatsapp_reminder"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Reminder Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": {
+          "response": "responseData",
+          "responseData": "={{ $json }}"
+        },
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// This function combines appointment and user data\nconst appointmentData = items[0].json;\nconst userData = items[1].json;\n\nreturn [\n  {\n    json: {\n      appointment: appointmentData,\n      user: userData,\n      originalData: $input.item.json\n    }\n  }\n];"
+      },
+      "name": "Combine Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        950,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Appointment Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment Created": {
+      "main": [
+        [
+          {
+            "node": "Get Appointment Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Appointment Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment Reminder": {
+      "main": [
+        [
+          {
+            "node": "Get Appointment Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get Appointment Details": {
+      "main": [
+        [
+          {
+            "node": "Get User Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User Details": {
+      "main": [
+        [
+          {
+            "node": "Combine Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Appointment Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Confirmation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Appointment Reminder": {
+      "main": [
+        [
+          {
+            "node": "Reminder Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmation Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Data": {
+      "main": [
+        [
+          {
+            "node": "Send Appointment Confirmation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Appointment Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1",
+  "id": "2",
+  "meta": {
+    "instanceId": "1"
+  },
+  "tags": []
+}
